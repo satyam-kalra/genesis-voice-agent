@@ -69,8 +69,6 @@
             font-size: 13px;
         }
     </style>
-    <!-- ReconnectingWebSocket to allow custom headers -->
-    <script src="reconnecting-websocket.min.js"></script>
 </head>
 <body>
 <div class="phone">
@@ -86,8 +84,8 @@
 </div>
 
 <script>
-    // This will be replaced later with your actual Codespace WebSocket URL
-    const BACKEND_WS_URL = 'wss://https://humble-yodel-wgqvxx9wqrjfv99x-3000.app.github.dev/';
+    // Use wss:// for secure WebSocket, remove trailing slash
+    const BACKEND_WS_URL = 'wss://humble-yodel-wgqvxx9wqrjfv99x-3000.app.github.dev';
 
     let ws = null;
     let mediaStream = null;
@@ -112,7 +110,7 @@
         if (processor) processor.disconnect();
         if (source) source.disconnect();
         if (audioContext) audioContext.close();
-        if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+        if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
         if (ws) ws.close();
         ws = null;
         callBtn.disabled = false;
@@ -127,18 +125,8 @@
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             source = audioContext.createMediaStreamSource(mediaStream);
 
-            // Create ReconnectingWebSocket with User-Agent header (required by some hosts)
-            ws = new ReconnectingWebSocket(BACKEND_WS_URL, [], {
-                maxReconnectAttempts: 5,
-                maxReconnectInterval: 3000,
-                connectionTimeout: 10000,
-                constructor: function(url, protocols, options) {
-                    options.headers = {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                    };
-                    return new WebSocket(url, protocols);
-                }
-            });
+            // Simple native WebSocket – no extra library needed
+            ws = new WebSocket(BACKEND_WS_URL);
             ws.binaryType = 'arraybuffer';
 
             ws.onopen = () => {
