@@ -2,104 +2,40 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Genesis Voice AI Demo</title>
+    <title>Genesis Voice AI</title>
     <style>
-        body {
-            background: #0a0f1c;
-            font-family: system-ui, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-        }
-        .phone {
-            background: #11161f;
-            border-radius: 48px;
-            padding: 20px;
-            width: 360px;
-            max-width: 100%;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-        }
-        .screen {
-            background: #000;
-            border-radius: 32px;
-            padding: 20px;
-            height: 260px;
-            overflow-y: auto;
-            color: #0f0;
-            font-family: monospace;
-            font-size: 14px;
-            margin-bottom: 20px;
-        }
-        .log-line {
-            margin: 8px 0;
-            border-left: 2px solid #0f0;
-            padding-left: 10px;
-        }
-        .log-line.user {
-            border-left-color: #88f;
-            color: #ccf;
-        }
-        button {
-            background: #2c3e4e;
-            border: none;
-            color: white;
-            font-size: 1.2rem;
-            padding: 12px 24px;
-            border-radius: 40px;
-            margin: 5px;
-            cursor: pointer;
-        }
-        #call {
-            background: #1e7e34;
-        }
-        #hangup {
-            background: #9e2a2a;
-        }
-        button:disabled {
-            opacity: 0.5;
-        }
-        .status {
-            text-align: center;
-            color: #aaa;
-            margin-top: 15px;
-            font-size: 13px;
-        }
+        body { background: #0a0f1c; font-family: system-ui; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .phone { background: #11161f; border-radius: 48px; padding: 20px; width: 360px; text-align: center; }
+        .screen { background: #000; border-radius: 32px; padding: 20px; height: 260px; overflow-y: auto; color: #0f0; font-family: monospace; text-align: left; margin-bottom: 20px; }
+        .log-line { margin: 8px 0; border-left: 2px solid #0f0; padding-left: 10px; }
+        .log-line.user { border-left-color: #88f; color: #ccf; }
+        button { background: #2c3e4e; border: none; color: white; font-size: 1.2rem; padding: 12px 24px; border-radius: 40px; margin: 5px; cursor: pointer; }
+        #call { background: #1e7e34; }
+        #hangup { background: #9e2a2a; }
+        button:disabled { opacity: 0.5; }
+        .status { color: #aaa; margin-top: 15px; font-size: 13px; }
     </style>
 </head>
 <body>
 <div class="phone">
-    <div class="screen" id="logScreen">
-        <div class="log-line">⚡ Genesis AI Receptionist ready</div>
-        <div class="log-line">🎤 Click "Call" and speak</div>
-    </div>
-    <div style="text-align:center;">
-        <button id="call">📞 Call</button>
-        <button id="hangup" disabled>❌ Hang up</button>
-    </div>
+    <div class="screen" id="logScreen"><div class="log-line">⚡ Genesis AI ready</div><div class="log-line">🎤 Click Call & speak</div></div>
+    <button id="call">📞 Call</button>
+    <button id="hangup" disabled>❌ Hang up</button>
     <div class="status" id="status">● Disconnected</div>
 </div>
 
 <script>
-    const BACKEND_WS_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=';
+    // ✅ Replace with your Codespace public URL (from Ports tab) + '/ask'
+    const BACKEND_URL = 'https://humble-yodel-wgqvxx9wqrjfv99x-3000.app.github.dev/ask';
 
     let recognition = null;
     let isListening = false;
     let isSpeaking = false;
-    let currentMessage = '';
 
     const logScreen = document.getElementById('logScreen');
     const statusDiv = document.getElementById('status');
     const callBtn = document.getElementById('call');
     const hangupBtn = document.getElementById('hangup');
-
-    // Gemini API key – you need to set it here (or get from environment, but it's browser)
-    // For security, you should put it in a variable; but since this is a demo, it's okay.
-    // Get your key from https://makersuite.google.com/app/apikey
-    const GEMINI_API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your actual key
 
     function addLog(text, isUser = false) {
         const div = document.createElement('div');
@@ -111,64 +47,42 @@
 
     function speak(text) {
         return new Promise((resolve) => {
-            if (!window.speechSynthesis) {
-                resolve();
-                return;
-            }
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'en-US';
             utterance.rate = 1.0;
-            utterance.onend = () => resolve();
-            utterance.onerror = () => resolve();
+            utterance.onend = resolve;
             window.speechSynthesis.speak(utterance);
         });
     }
 
-    async function callGemini(prompt) {
-        const url = `${BACKEND_WS_URL}${GEMINI_API_KEY}`;
-        const payload = {
-            contents: [{
-                parts: [{ text: prompt }]
-            }],
-            generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 150,
-            }
-        };
+    async function callProxy(prompt) {
         try {
-            const response = await fetch(url, {
+            const response = await fetch(BACKEND_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ prompt })
             });
             const data = await response.json();
-            if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-                return data.candidates[0].content.parts[0].text;
-            } else {
-                console.error('Gemini error:', data);
-                return "I'm sorry, I didn't understand that.";
-            }
+            return data.reply || "Sorry, I didn't understand.";
         } catch (err) {
             console.error(err);
-            return "I'm having trouble connecting. Please try again.";
+            return "Error: Could not reach the server.";
         }
     }
 
     async function startListening() {
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            addLog("Sorry, your browser doesn't support speech recognition. Use Chrome, Edge, or Safari.", false);
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            addLog("Browser does not support speech recognition. Use Chrome or Edge.", false);
             return;
         }
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SpeechRecognition();
         recognition.lang = 'en-US';
         recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
 
         recognition.onstart = () => {
             isListening = true;
             statusDiv.innerText = '● Listening...';
-            addLog('Listening...', false);
         };
 
         recognition.onresult = async (event) => {
@@ -178,61 +92,49 @@
             recognition.stop();
             isListening = false;
 
-            // Call Gemini
-            const reply = await callGemini(transcript);
+            const reply = await callProxy(transcript);
             addLog(reply, false);
             statusDiv.innerText = '● Speaking...';
             await speak(reply);
             statusDiv.innerText = '● Connected – speak now';
-            // Automatically restart listening
-            if (!isSpeaking && !isListening) {
-                startListening();
-            }
+            if (!isListening && !isSpeaking) startListening();
         };
 
-        recognition.onerror = (event) => {
-            console.error('Speech recognition error', event.error);
-            addLog(`Error: ${event.error}`, false);
+        recognition.onerror = (e) => {
+            console.error(e);
+            addLog(`Error: ${e.error}`, false);
             statusDiv.innerText = '● Disconnected';
-            isListening = false;
-        };
-
-        recognition.onend = () => {
-            if (isListening && !isSpeaking) {
-                // if still active, restart
-                startListening();
-            }
+            cleanup();
         };
         recognition.start();
     }
 
-    async function startCall() {
-        if (isListening) return;
-        callBtn.disabled = true;
-        hangupBtn.disabled = false;
-        statusDiv.innerText = '● Connected – speak now';
-        addLog('Call active. Speak into your microphone.', false);
-        await startListening();
-    }
-
-    function hangup() {
-        if (recognition) {
-            recognition.stop();
-            recognition = null;
-        }
-        if (window.speechSynthesis) {
-            window.speechSynthesis.cancel();
-        }
+    function cleanup() {
+        if (recognition) recognition.stop();
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
         isListening = false;
         isSpeaking = false;
         callBtn.disabled = false;
         hangupBtn.disabled = true;
         statusDiv.innerText = '● Disconnected';
-        addLog('Call ended.', false);
+    }
+
+    async function startCall() {
+        cleanup();
+        try {
+            await navigator.mediaDevices.getUserMedia({ audio: true });
+            callBtn.disabled = true;
+            hangupBtn.disabled = false;
+            statusDiv.innerText = '● Connected – speak now';
+            addLog('Call active. Speak into your microphone.', false);
+            await startListening();
+        } catch (err) {
+            addLog(`Microphone error: ${err.message}`, false);
+        }
     }
 
     callBtn.addEventListener('click', startCall);
-    hangupBtn.addEventListener('click', hangup);
+    hangupBtn.addEventListener('click', cleanup);
 </script>
 </body>
 </html>
