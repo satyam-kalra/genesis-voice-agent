@@ -9,7 +9,7 @@ const wss = new WebSocket.Server({ server });
 
 // Gemini Live API configuration
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 wss.on('connection', (ws, req) => {
   console.log('🔌 Browser connected');
