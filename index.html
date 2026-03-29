@@ -84,7 +84,7 @@
 </div>
 
 <script>
-    // Use wss:// for secure WebSocket, remove trailing slash
+    // ⚠️ REPLACE WITH YOUR CODESPACE PUBLIC URL (wss://...)
     const BACKEND_WS_URL = 'wss://humble-yodel-wgqvxx9wqrjfv99x-3000.app.github.dev';
 
     let ws = null;
@@ -125,7 +125,7 @@
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             source = audioContext.createMediaStreamSource(mediaStream);
 
-            // Simple native WebSocket – no extra library needed
+            // Use plain WebSocket – no extra library needed
             ws = new WebSocket(BACKEND_WS_URL);
             ws.binaryType = 'arraybuffer';
 
